@@ -44,6 +44,7 @@ func options(dumpPath string, excludes, includes []string) (opts []string) {
 	tarPath := path.Join(dumpPath, "archive.tar")
 	if helper.IsGnuTar {
 		opts = append(opts, "--ignore-failed-read")
+		opts = append(opts, "--warning=no-file-changed")
 	}
 	opts = append(opts, "-cPf", tarPath)
 
