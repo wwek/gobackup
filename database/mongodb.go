@@ -11,6 +11,7 @@ import (
 // MongoDB database
 //
 // type: mongodb
+// uri: mongodb://username:password@host:port/database?authSource=database
 // host: 127.0.0.1
 // port: 27017
 // database:
@@ -18,19 +19,22 @@ import (
 // password:
 // authdb:
 // exclude_tables:
+// exclude_tables_prefix:
 // oplog: false
 // args:
 type MongoDB struct {
 	Base
-	host          string
-	port          string
-	database      string
-	username      string
-	password      string
-	authdb        string
-	excludeTables []string
-	oplog         bool
-	args          string
+	uri                 string
+	host                string
+	port                string
+	database            string
+	username            string
+	password            string
+	authdb              string
+	excludeTables       []string
+	excludeTablesPrefix []string
+	oplog               bool
+	args                string
 }
 
 var (
@@ -43,6 +47,7 @@ func (db *MongoDB) init() (err error) {
 	viper.SetDefault("host", "127.0.0.1")
 	viper.SetDefault("port", 27017)
 
+	db.uri = viper.GetString("uri")
 	db.host = viper.GetString("host")
 	db.port = viper.GetString("port")
 	db.database = viper.GetString("database")
@@ -51,12 +56,19 @@ func (db *MongoDB) init() (err error) {
 	db.oplog = viper.GetBool("oplog")
 	db.authdb = viper.GetString("authdb")
 	db.excludeTables = viper.GetStringSlice("exclude_tables")
+	db.excludeTablesPrefix = viper.GetStringSlice("exclude_tables_prefix")
 	db.args = viper.GetString("args")
 
 	return nil
 }
 
 func (db *MongoDB) build() string {
+	if len(db.uri) > 0 {
+		return mongodumpCli + " " +
+			"--uri=" + db.uri + " " +
+			db.additionOption() + " " +
+			"--out=" + db.dumpPath
+	}
 	return mongodumpCli + " " +
 		db.nameOption() + " " +
 		db.credentialOptions() + " " +
@@ -103,6 +115,10 @@ func (db *MongoDB) additionOption() string {
 
 	for _, table := range db.excludeTables {
 		opts = append(opts, "--excludeCollection="+table)
+	}
+
+	for _, table := range db.excludeTablesPrefix {
+		opts = append(opts, "--excludeCollectionsWithPrefix="+table)
 	}
 
 	if len(db.args) > 0 {
